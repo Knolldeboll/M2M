@@ -129,55 +129,42 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
 
 
 
-    /* Process img: Grayscale, blur, canny edge detection */
+
+
+    const rectify = () => {
+        if (!imgRef.current || !outputCanvasRef.current) {
+            console.log("no img or no output canvas")
+            return;
+        }
+    }
+
 
     /** Main Method for processing image from img element */
     const processImg = () => {
 
-
-        // ist das vielleicht so ne Await-Randomkacke hier?
-        // dass manchmal der convert zu langsam ist, und dann erst so nums?
         if (!imgRef.current || !outputCanvasRef.current) {
             console.log("no img or no output canvas")
             return;
         }
 
+
         const img = imgRef.current;
         const rawMat = cv.imread(img);
 
-        // now use customMat class for filtering
+        //  use customMat class for applying filters in chained way
+        const processedMat = new customMat(cv, rawMat).rgb().bilateralFilter().gray().medianBlur(11).toCvMat();
 
-        const processMat = new customMat(cv, rawMat).rgb().bilateralFilter().gray().toCvMat();
+        console.log("processed mat: ", processedMat)
 
-        console.log("processed mat: ", processMat)
-
-        /*
-        const grayMat = new cv.Mat();
-        const blurMat = new cv.Mat();
-        const cannyMat = new cv.Mat();
-
-        cv.cvtColor(rawMat, grayMat, cv.COLOR_RGBA2GRAY);
-        cv.medianBlur(grayMat, blurMat, 3);
-*/
-        display(processMat);
+        display(processedMat);
         return;
 
 
-        /*
 
-        cv.Canny(grayMat, cannyMat, canny1, canny2, canny3, false);
 
-        console.log("shown on 2nd canvas", cannyMat)
+        //  cv.Canny(grayMat, cannyMat, canny1, canny2, canny3, false);
 
-        // You can try more different parameters
-        // cv.Canny(grayMat, cannyMat, 50, 100, 3, false);
 
-        display(cannyMat);
-
-        rawMat.delete();
-        grayMat.delete();
-        cannyMat.delete();
-*/
 
 
     }
@@ -191,6 +178,7 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
         cv.imshow(outputCanvasRef.current!, mat);
 
     }
+
 
     //TODO: wenn nicht loaded, dann so spinner oder so.
 

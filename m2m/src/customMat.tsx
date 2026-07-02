@@ -34,7 +34,9 @@ class customMat {
     }
 
 
-    /**Applies bilateral Filter. Mat must be converted  to RGB (better) or gray before. */
+    /**
+     * Applies bilateral Filter. Mat must be converted  to RGB (better) or gray before.
+     *  */
     public bilateralFilter = () => {
 
 
@@ -54,6 +56,18 @@ class customMat {
 
         return this;
 
+    }
+
+    /**
+     * applies median blur. should be grayed before
+     *  
+     * */
+    public medianBlur = (strength = 3) => {
+
+        this.replace((inMat, outMat) => {
+            this.cv.medianBlur(inMat, outMat, strength);
+        })
+        return this;
     }
 
 
