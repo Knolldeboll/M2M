@@ -100,10 +100,11 @@ class customMat {
 
     public canny = () => {
 
-        const outMat = new this.cv.Mat();
 
-        this.mat.delete();
-        this.mat = outMat;
+        // Param 1/2 hoch: unsensitiver für kanten. nur kranke kanten kommen raus.
+        //  ggf. nicht schlecht bei bg-Wolken zum rausfiltern.
+
+        this.replace((inMat, outMat) => { this.cv.Canny(inMat, outMat, 50, 100, 3, false); })
 
         return this;
     }

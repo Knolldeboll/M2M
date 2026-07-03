@@ -130,12 +130,28 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
 
 
 
-
-    const rectify = () => {
+    // TODO: put area of interest rectangle on the mat
+    // also display this to the user beforehand - maybe in a overlaid same-sized rect  on the canvas that displays the camera input,
+    // rather than modifying and redisplaying the canvasses' mat.
+    const rectify = (inMat: any) => {
         if (!imgRef.current || !outputCanvasRef.current) {
             console.log("no img or no output canvas")
             return;
         }
+
+        // Dreck: das ist in pixeln und nicht responsive in %.
+        // muss man ggf. anhand der bildschirmgröße neu berechnen.
+        // z.B. bilschirm ist 600px lang und 400px breit: dann soll margin davon je 10% sein.
+        // d.h. 60, 40, 540 560
+
+
+        // das ist X Y W H Kollege.
+
+        let rect = new cv.Rect(255, 120, 400, 100);
+
+
+        return inMat.roi(rect);
+
     }
 
 
@@ -151,8 +167,11 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
         const img = imgRef.current;
         const rawMat = cv.imread(img);
 
+        const rectMat = rectify(rawMat);
+        rawMat.delete();
+
         //  use customMat class for applying filters in chained way
-        const processedMat = new customMat(cv, rawMat).rgb().bilateralFilter().gray().medianBlur(11).toCvMat();
+        const processedMat = new customMat(cv, rectMat).rgb().bilateralFilter().gray().medianBlur(3).canny().toCvMat();
 
         console.log("processed mat: ", processedMat)
 
@@ -160,14 +179,17 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
         return;
 
 
+    }
 
-
-        //  cv.Canny(grayMat, cannyMat, canny1, canny2, canny3, false);
-
+    /**Extract points of interest from the processed mat. */
+    const extractPoints = (mat: any) => {
 
 
 
     }
+
+
+
 
     const display = (mat: any) => {
 
