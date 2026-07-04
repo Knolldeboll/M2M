@@ -24,13 +24,6 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
 
 
 
-    const [changeCanny, setChangeCanny] = useState<false>();
-
-    const [canny1, setCanny1] = useState<number>(50);
-    const [canny2, setCanny2] = useState<number>(100);
-    const [canny3, setCanny3] = useState<number>(3);
-
-
 
     /**Convert the inputs file to a url and set the imgs src to it. */
     const onFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -100,12 +93,6 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
     }
 
 
-    useEffect(() => {
-
-        console.log("canny changed", canny1, canny2, canny3)
-
-    }, [canny1, canny2, canny3])
-
 
     /**Man kann auch imgData wieder in den 2d-context eines canvases schreiben, um anzuzeigen
      * -- ggf. interessant, wenn man imgData manipulieren möchte.
@@ -171,33 +158,196 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
         rawMat.delete();
 
         //  use customMat class for applying filters in chained way
-        const processedMat = new customMat(cv, rectMat).rgb().bilateralFilter().gray().medianBlur(3).canny().toCvMat();
+        const processedMat = new customMat(cv, rectMat).rgb().bilateralFilter().gray().medianBlur(1).canny().toCvMat();
 
         console.log("processed mat: ", processedMat)
 
-        display(processedMat);
+        //displayMat(processedMat);
+
+        const extracted = extractRidgePoints(processedMat)
+        const smoothened = smoothRidgePoints(extracted);
+
+        const pois = extractPois(smoothened);
+
+
+        // packt die pois aufs canny-mat und displayt das dann auf dem canvas!
+
+        drawPointsOnMat(extracted, processedMat)
+        //drawPointsOnMat(pois, processedMat);
+
+
+
+        // TODO: search pois in (smothened) ridge 
+        // TODO: Display pois on image. attention: 
+        //       must draw them in the overlaid ROI, not on the raw image of cam-input-size!
         return;
-
-
     }
 
     /**Extract points of interest from the processed mat. */
-    const extractPoints = (mat: any) => {
+    const extractRidgePoints = (mat: any) => {
 
+        const data = mat.data;
+        const ridge = []
 
+        for (let x = 0; x < mat.cols; x++) {
+            for (let y = 0; y < mat.rows; y++) {
+
+                // row 0 is from 0 to 399, 
+                // row 1 is from 400 to 799, 
+                // so  take first index of row (ranges from 0 to cols*rows)
+                // and add current index in row (iterated over cols)
+                const value = data[y * mat.cols + x];
+
+                if (value > 0) {
+                    ridge.push({ x, y })
+                    // runs faster the upper the edge is!
+                    break;
+                }
+            }
+
+        }
+
+        console.log("extracted ridge:", ridge)
+
+        return ridge;
 
     }
 
 
+    // unwichtiges todo: wie typen wir sowas? 
+    // so. aber hier kein definierter typ wie "Point" oder so.
+
+    /**Applies Gaussian smoothing to the ridge point array to  */
+    const smoothRidgePoints = (ridge: { x: number; y: number }[]) => {
+
+        const kernel = [1, 4, 6, 4, 1];
+        const radius = 2;
+
+        const out: { x: number; y: number }[] = [];
+
+        for (let i = 0; i < ridge.length; i++) {
+
+            let weighted = 0;
+            let weightSum = 0;
+
+            for (let k = -radius; k <= radius; k++) {
+
+                const idx = i + k;
+
+                if (idx < 0 || idx >= ridge.length)
+                    continue;
+
+                const weight = kernel[k + radius];
+
+                weighted += ridge[idx].y * weight;
+                weightSum += weight;
+            }
+
+            out.push({
+                x: ridge[i].x,
+                y: weighted / weightSum
+            });
+        }
+
+        console.log("smoothed ridge:", out)
+        return out;
+
+    }
+
+    const extractPois = (ridge: { x: number; y: number }[]) => {
+
+        const out: { x: number; y: number }[] = [];
+
+        // first ones free? hängt davon ab ob man beim rect anfängt oder erst beim ersten gipfel, der ggf früh nachm strich kommt
+        //out.push(ridge[0])
 
 
-    const display = (mat: any) => {
+        for (let l = 0; l < ridge.length; l++) {
+
+            // compare 3 neighbours
+            let neighbours = [];
+
+            // iterate over 3 neighbours to save them
+            for (let i = l - 1; i <= l + 1; i++) {
+                if (i < 0 || i >= ridge.length) {
+                    // wird eh nix drin sein
+                    console.log("nix neighbours", i)
+                    neighbours = [];
+                    continue;
+                };
+
+                // save 3 neihgbours of current point
+                neighbours.push(ridge[i])
+
+            }
+
+            if (neighbours.length != 3) {
+                // safety catch.
+                console.log("neighbors not 3", neighbours)
+                neighbours = [];
+                continue;
+            }
+
+
+            // TODO: naheliegende extrema weghauen!
+            // aber gefahr: wenn z.b. nur sehr weggezoomtes bild ist, liegen die tatsächlich guten extrema trz nah beieinander!
+            // aber vielleicht dann einfach user problem, der user soll halt reinzoomen dass es passt.
+
+
+            // wenn hier 0 <= 1 > 2 ist, dann ist auch __. und dann nach unten drinnen
+
+            // Vielleicht kann man daraus so richtige knickpunkte ablesen, die sind ggf aussagekräftiger als spitzen, die ggf. zu knapp sind,
+            if ((neighbours[0].y < neighbours[1].y && neighbours[1].y >= neighbours[2].y)) {
+                // minimum or maximum
+                out.push(neighbours[1])
+                console.log("maximum found:", neighbours[1])
+            }
+            if ((neighbours[0].y > neighbours[1].y && neighbours[2].y > neighbours[1].y)) {
+                out.push(neighbours[1])
+                console.log("minimum found:", neighbours[1])
+            }
+
+            neighbours = [];
+
+        }
+
+        return out;
+    }
+
+    const displayMat = (mat: any) => {
 
 
         // Hier immer current enforcen, damit da auch safe kein undefined drin ist.
         // checkt der sonst nicht.
         // obwohl das eig schon oben gemacht wurde..
         cv.imshow(outputCanvasRef.current!, mat);
+
+    }
+
+
+    const drawPointsOnMat = (points: { x: number; y: number }[], inMat: any) => {
+
+        const overlay = inMat.clone();
+
+        const overlayRgba = new customMat(cv, overlay).gray2rgba().toCvMat();
+        console.log(overlayRgba.channels())
+        // return;
+        for (const p of points) {
+            cv.circle(
+                overlayRgba,
+                new cv.Point(p.x, p.y),
+                1,
+                new cv.Scalar(0, 0, 255, 255),
+                -1
+            );
+        }
+
+
+
+        cv.imshow(outputCanvasRef.current!, overlayRgba)
+        //overlay.delete();
+        //inMat.delete();
+
 
     }
 

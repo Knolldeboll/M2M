@@ -51,7 +51,7 @@ class customMat {
         // das nix. aber warum?
 
         this.replace((inMat, outMat) => {
-            this.cv.bilateralFilter(inMat, outMat, 9, 100, 100, this.cv.BORDER_DEFAULT);
+            this.cv.bilateralFilter(inMat, outMat, 9, 150, 100, this.cv.BORDER_DEFAULT);
         })
 
         return this;
@@ -90,6 +90,12 @@ class customMat {
     public rgb = () => {
 
         this.replace((inMat, outMat) => { this.cv.cvtColor(inMat, outMat, this.cv.COLOR_RGBA2RGB, 0) });
+        return this;
+
+    }
+
+    public gray2rgba = () => {
+        this.replace((inMat, outMat) => { this.cv.cvtColor(inMat, outMat, this.cv.COLOR_GRAY2RGBA, 0) });
         return this;
 
     }
