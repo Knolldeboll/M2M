@@ -158,7 +158,7 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
         rawMat.delete();
 
         //  use customMat class for applying filters in chained way
-        const processedMat = new customMat(cv, rectMat).rgb().bilateralFilter().gray().medianBlur(1).canny().toCvMat();
+        const processedMat = new customMat(cv, rectMat).rgb().bilateralFilter().gray().medianBlur(5).canny().toCvMat();
 
         console.log("processed mat: ", processedMat)
 
@@ -173,7 +173,7 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
         // packt die pois aufs canny-mat und displayt das dann auf dem canvas!
 
         drawPointsOnMat(extracted, processedMat)
-        //drawPointsOnMat(pois, processedMat);
+        drawPointsOnMat(pois, processedMat);
 
 
 
@@ -256,19 +256,22 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
 
     const extractPois = (ridge: { x: number; y: number }[]) => {
 
+        //return [];
         const out: { x: number; y: number }[] = [];
 
+        const neigbourCount = 10;
         // first ones free? hängt davon ab ob man beim rect anfängt oder erst beim ersten gipfel, der ggf früh nachm strich kommt
         //out.push(ridge[0])
 
 
-        for (let l = 0; l < ridge.length; l++) {
 
-            // compare 3 neighbours
+        for (let l = neigbourCount; l < (ridge.length - neigbourCount); l++) {
+
+
             let neighbours = [];
 
-            // iterate over 3 neighbours to save them
-            for (let i = l - 1; i <= l + 1; i++) {
+            // iterate over neighbourCount* neighbours of ridge[l]
+            for (let i = l - neigbourCount; i <= l + neigbourCount; i++) {
                 if (i < 0 || i >= ridge.length) {
                     // wird eh nix drin sein
                     console.log("nix neighbours", i)
@@ -281,9 +284,11 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
 
             }
 
-            if (neighbours.length != 3) {
-                // safety catch.
-                console.log("neighbors not 3", neighbours)
+
+            // safety catch for edge cases (indeed at the edge)
+            if (neighbours.length != (neigbourCount * 2 + 1)) {
+
+                console.log("neighbors not", (neigbourCount * 2 + 1), neighbours)
                 neighbours = [];
                 continue;
             }
@@ -294,10 +299,79 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
             // aber vielleicht dann einfach user problem, der user soll halt reinzoomen dass es passt.
 
 
+            // IDEE: aktuell komen zu viele randoms, und zu viele gute kommen nicht.
+            // - was, wenn man v.l.n.r vorgeht und bisschen großzügiger bewertet, d.H. 
+            // z.b. mit nem scope von 2 nachbarn auf jeder seite, und wenn z.b. 3/5 das kriterium erfüllen, dann poi? 
+            // und rest klärt sich dann 
+
             // wenn hier 0 <= 1 > 2 ist, dann ist auch __. und dann nach unten drinnen
 
             // Vielleicht kann man daraus so richtige knickpunkte ablesen, die sind ggf aussagekräftiger als spitzen, die ggf. zu knapp sind,
-            if ((neighbours[0].y < neighbours[1].y && neighbours[1].y >= neighbours[2].y)) {
+
+            // TODO: middle raussuchen, (ridge[l])//
+            // alle außer dem mitnander vergleichen!
+            // z.b. 2 können gleich sein, 2 müssen niedriger sein?
+
+            // so kann man genauer sein: z.b wenn die vorderen 2/3 lower sind und der 1/3 gleich, gut - gleichzeitigen die nächsten auch lower oder gleich,
+            // das nimmt dann auch so anfänge von bergkuppen an! aber reine random punkte an slopes!
+
+            // am besten mit for-schleife über alle neighs drüber, und das mittlere skippen.
+            // dann statistik machen.
+            const middleman = ridge[l]
+            let sameCount = 0;
+            let higherCount = 0;
+            let lowerCount = 0;
+
+            for (let n of neighbours) {
+                if (n === middleman) continue;
+
+                if (n.y > middleman.y) higherCount++;
+                if (n.y < middleman.y) lowerCount++;
+                if (n.y == middleman.y) sameCount++;
+            }
+
+
+
+            // maximum: min. eine seite ist <, eine seite ist =, die andere muss 0/minimal sein sein
+
+
+            // maximumverdacht
+            if (higherCount == 0) {
+                // lower muss mehr als same sein, sonst ist gerade!
+
+
+                const lowerRate = lowerCount / sameCount;
+                // bei 1: gleich viele. bei >1: mehr lower als gerade. 
+                // 
+
+                // vielleicht kann auch so 1 toleranz-higher drin sein!
+                if (lowerRate >= 1) {
+                    // out.push(middleman)
+                    console.log("max:", middleman, "rate", lowerRate)
+                    out.push(middleman)
+                    l += 5;
+                }
+            }
+
+
+            // minimumverdacht
+            if (lowerCount == 0) {
+                // console.log("minverdacht")
+                const higherRate = higherCount / sameCount;
+
+                if (higherRate >= 1) {
+                    console.log("min", middleman, " rate: ", higherRate)
+                    out.push(middleman)
+                    l += 5;
+                }
+            }
+
+
+
+
+
+            /** Old bums
+            if ((neighbours[0].y < neighbours[1].y && neighbours[1].y > neighbours[2].y)) {
                 // minimum or maximum
                 out.push(neighbours[1])
                 console.log("maximum found:", neighbours[1])
@@ -305,7 +379,7 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
             if ((neighbours[0].y > neighbours[1].y && neighbours[2].y > neighbours[1].y)) {
                 out.push(neighbours[1])
                 console.log("minimum found:", neighbours[1])
-            }
+            } */
 
             neighbours = [];
 
