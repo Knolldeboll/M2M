@@ -26,6 +26,7 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
     const [imgSrcURL, setImgSrcURL] = useState<string | null>(null);
 
     const finalPois = useRef<Point[] | null>(null);
+    const rows = useRef<number>(null)
 
 
     const soundConverter = useRef<SoundConverter | null>(null);
@@ -124,9 +125,9 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
 
 
 
-    // TODO: put area of interest rectangle on the mat
-    // also display this to the user beforehand - maybe in a overlaid same-sized rect  on the canvas that displays the camera input,
-    // rather than modifying and redisplaying the canvasses' mat.
+    // TODO: display rect to be clipped on the original input canvas (image or video)
+
+    // Achtung: stand jetzt kommt auch immer n anderes rect, je nch screen size... BRO
     const rectify = (inMat: any) => {
         if (!imgRef.current || !outputCanvasRef.current) {
             console.log("no img or no output canvas")
@@ -139,7 +140,7 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
         // d.h. 60, 40, 540 560
 
 
-        // das ist X Y W H Kollege.
+        //Achtung: das ist X Y W H Kollege. also x/y = 50%vw/vh, width/height je 90% vw/vh
 
         let rect = new cv.Rect(255, 120, 400, 100);
 
@@ -162,17 +163,22 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
         const rawMat = cv.imread(img);
 
         const rectMat = rectify(rawMat);
-        rawMat.delete();
+        // 
 
         //  use customMat class for applying filters in chained way
         const processedMat = new customMat(cv, rectMat).rgb().bilateralFilter().gray().medianBlur(5).canny().toCvMat();
 
         console.log("processed mat: ", processedMat)
 
-        //displayMat(processedMat);
+        rows.current = processedMat.rows;
+        console.log("rows:", rows.current)
+
+
+        // non mat-returning operations
 
         const extracted = extractRidgePoints(processedMat)
         const smoothened = smoothRidgePoints(extracted);
+
 
         const pois = extractPois(smoothened);
 
@@ -181,10 +187,14 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
 
         // packt die pois aufs canny-mat und displayt das dann auf dem canvas!
 
-        drawPointsOnMat(extracted, processedMat)
+        // drawPointsOnMat(extracted, processedMat)
+
         drawPointsOnMat(pois, processedMat);
 
-
+        //cleanup - failt aber, anscheinend wird inen bums noch gerbaucht
+        // processedMat.delete();
+        // rectMat.delete();
+        // rawMat.delete();
 
         // TODO: search pois in (smothened) ridge 
         // TODO: Display pois on image. attention: 
@@ -209,7 +219,7 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
 
                 if (value > 0) {
                     ridge.push({ x, y })
-                    // runs faster the upper the edge is!
+                    // quits faster the upper the edge is!
                     break;
                 }
             }
@@ -263,6 +273,8 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
 
     }
 
+
+    // TODO: Check what happens at infinity (/0) - is this good as is?
     const extractPois = (ridge: Point[]) => {
 
         //return [];
@@ -450,6 +462,7 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
 
         await Tone.start();
 
+
         console.log("Tone ready")
         setSoundReady(true)
         soundConverter.current = new SoundConverter();
@@ -466,7 +479,7 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
             return;
         }
         soundConverter.current?.playNotes()
-        soundConverter.current?.convertPOIs(finalPois.current);
+        soundConverter.current?.convertPOIs(finalPois.current, rows.current!);
 
     }
 
