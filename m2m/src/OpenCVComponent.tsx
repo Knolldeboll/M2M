@@ -1,9 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { useOpenCv } from "opencv-react";
+import * as Tone from "tone";
+import "./types.ts"
 
 
 import berge from "./assets/berge.jpeg";
 import customMat from "./customMat";
+import SoundConverter from "./SoundConverter";
+import type { Point } from "./types.ts";
 
 
 interface OpenCVComponentProps {
@@ -21,9 +25,12 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
     const outputCanvasRef = useRef<HTMLCanvasElement>(null);
     const [imgSrcURL, setImgSrcURL] = useState<string | null>(null);
 
+    const finalPois = useRef<Point[] | null>(null);
 
 
+    const soundConverter = useRef<SoundConverter | null>(null);
 
+    const [soundReady, setSoundReady] = useState(false);
 
     /**Convert the inputs file to a url and set the imgs src to it. */
     const onFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -169,6 +176,8 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
 
         const pois = extractPois(smoothened);
 
+        finalPois.current = pois;
+
 
         // packt die pois aufs canny-mat und displayt das dann auf dem canvas!
 
@@ -218,7 +227,7 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
     // so. aber hier kein definierter typ wie "Point" oder so.
 
     /**Applies Gaussian smoothing to the ridge point array to  */
-    const smoothRidgePoints = (ridge: { x: number; y: number }[]) => {
+    const smoothRidgePoints = (ridge: Point[]) => {
 
         const kernel = [1, 4, 6, 4, 1];
         const radius = 2;
@@ -254,10 +263,11 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
 
     }
 
-    const extractPois = (ridge: { x: number; y: number }[]) => {
+    const extractPois = (ridge: Point[]) => {
 
         //return [];
-        const out: { x: number; y: number }[] = [];
+
+        const out: Point[] = [];
 
         const neigbourCount = 10;
         // first ones free? hängt davon ab ob man beim rect anfängt oder erst beim ersten gipfel, der ggf früh nachm strich kommt
@@ -317,16 +327,26 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
 
             // am besten mit for-schleife über alle neighs drüber, und das mittlere skippen.
             // dann statistik machen.
+
+
+            // TODO: ACHTUNG!!!!!!!!!!!!!!!!
+            // höheres Y = niedriger, da y=0 ganz oben ist haha
+            //
+            // funktioniert hier trotzdem, aus dummheit!
+            // weil normalerweise ist n higher, wenn n.y > middleman.y
+            // aber hab ich hier andersrum gemacht, ich schlau!
             const middleman = ridge[l]
+
+            // xy-count: n ist (lower/higher) als middleman-count
             let sameCount = 0;
-            let higherCount = 0;
             let lowerCount = 0;
+            let higherCount = 0;
 
             for (let n of neighbours) {
                 if (n === middleman) continue;
 
-                if (n.y > middleman.y) higherCount++;
-                if (n.y < middleman.y) lowerCount++;
+                if (n.y > middleman.y) lowerCount++;
+                if (n.y < middleman.y) higherCount++;
                 if (n.y == middleman.y) sameCount++;
             }
 
@@ -335,32 +355,31 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
             // maximum: min. eine seite ist <, eine seite ist =, die andere muss 0/minimal sein sein
 
 
-            // maximumverdacht
-            if (higherCount == 0) {
-                // lower muss mehr als same sein, sonst ist gerade!
+            // minverdacht
+            if (lowerCount == 0) {
 
 
-                const lowerRate = lowerCount / sameCount;
-                // bei 1: gleich viele. bei >1: mehr lower als gerade. 
+                const higherRate = higherCount / sameCount;
+                // bei 1: gleich viele. bei >1: mehr higher als gerade. 
                 // 
 
                 // vielleicht kann auch so 1 toleranz-higher drin sein!
-                if (lowerRate >= 1) {
+                if (higherRate >= 1) {
                     // out.push(middleman)
-                    console.log("max:", middleman, "rate", lowerRate)
+                    console.log("min:", middleman, "rate", higherRate)
                     out.push(middleman)
                     l += 5;
                 }
             }
 
 
-            // minimumverdacht
-            if (lowerCount == 0) {
-                // console.log("minverdacht")
-                const higherRate = higherCount / sameCount;
+            // maxverdacht
+            if (higherCount == 0) {
 
-                if (higherRate >= 1) {
-                    console.log("min", middleman, " rate: ", higherRate)
+                const lowerRate = lowerCount / sameCount;
+
+                if (lowerRate >= 1) {
+                    console.log("max", middleman, " rate: ", lowerRate)
                     out.push(middleman)
                     l += 5;
                 }
@@ -425,6 +444,32 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
 
     }
 
+    const startTone = async () => {
+
+        if (soundConverter.current) return;
+
+        await Tone.start();
+
+        console.log("Tone ready")
+        setSoundReady(true)
+        soundConverter.current = new SoundConverter();
+
+
+    }
+
+
+    // TODO: ggf. await bis die pois geladen sind.
+    const play = () => {
+
+        if (!finalPois.current) {
+            console.log("no pois yet to play!")
+            return;
+        }
+        soundConverter.current?.playNotes()
+        soundConverter.current?.convertPOIs(finalPois.current);
+
+    }
+
 
     //TODO: wenn nicht loaded, dann so spinner oder so.
 
@@ -440,12 +485,11 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
 
 
             <div className="w-[80%] mx-auto" style={{ display: "flex", flexDirection: "column" }}>
-                <div >
-                    <input type="number" name="canny1" defaultValue="50" onChange={(e) => { setCanny1(parseInt(e.target.value)) }} />
-                    <input type="number" name="canny2" defaultValue="100" onChange={(e) => { setCanny2(parseInt(e.target.value)) }} />
-                    <input type="number" name="canny3" defaultValue="3" onChange={(e) => { setCanny3(parseInt(e.target.value)) }} />
-                </div>  <canvas ref={outputCanvasRef} id="processedOutputCanvas"></canvas>
+                <canvas ref={outputCanvasRef} id="processedOutputCanvas"></canvas>
+                <button onClick={startTone}>Start Tone</button>
+                {soundReady && (<button onClick={play}>Play Sound</button>)}
             </div>
+
 
         </div>
     ))
