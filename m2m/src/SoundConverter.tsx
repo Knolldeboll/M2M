@@ -8,36 +8,52 @@ console.log("SoundConverter module loaded", Date.now());
 
 class SoundConverter {
 
-    private scale: any[];
-    private majorSteps = [0, 2, 4, 5, 7, 9, 11, 12];
+
+    // Notes to match POIs to
+    private scaleNotes: any[];
+
+    private finalNotes: any[] | undefined;
+    // über wieviele halbtöne um den key rum reden wir? z.B. 8 ist insg. 2 oktaven
+    private scaleSize;
+    private majorSteps = [2, 2, 1, 2, 2, 2, 1];
+
     private synth = new Tone.PolySynth(Tone.Synth).toDestination();
 
-    // über wieviele oktaven verteilen sich die töne? z.b. 1 unter base, 1 über base = 2 
-    private octaveCount = 2;
 
-    constructor() {
-        this.scale = [];
-        this.generateScale(Tone.Midi("C4"));
-        console.log("SC rettich")
-        // this.playNotes(this.scale);
+    constructor(scaleSize: number, root: string) {
+        this.scaleNotes = [];
+        this.scaleSize = scaleSize;
+        this.generateScale(Tone.Midi(root));
+
+
     }
 
     private generateScale = (rootMidi: any) => {
+        console.log("scalesize mep mep", this.scaleSize)
+
+        let scaleSteps = [0];
+
+        let interval = 0;
+
+        for (let i = 1; i < this.scaleSize; i++) {
+            interval += this.majorSteps[(i - 1) % this.majorSteps.length];
+            scaleSteps.push(interval);
+        }
 
 
-        let higherNotes = this.majorSteps.map(step =>
+        console.log("generated major scale steps: ", scaleSteps)
+
+        let higherNotes = scaleSteps.map(step =>
             Tone.Frequency(rootMidi + step, "midi").toNote()
         )
 
-
-        let lowerNotes = this.majorSteps.slice(0, -1).map(step =>
+        let lowerNotes = scaleSteps.slice(0, -1).map(step =>
             Tone.Frequency(rootMidi - 12 + step, "midi").toNote()
         )
 
-        this.scale.push(...lowerNotes, ...higherNotes)
+        this.scaleNotes.push(...lowerNotes, ...higherNotes)
 
-
-        console.log("generated scale:", this.scale)
+        console.log("generated scale:", this.scaleNotes)
     }
 
 
@@ -45,7 +61,7 @@ class SoundConverter {
     public convertPOIs = (pois: Point[], roiHeight: number) => {
 
         const stepHeights = []
-        const stepSize = roiHeight / this.scale.length;
+        const stepSize = roiHeight / this.scaleNotes.length;
 
         // also already flip the whole list, so that
         // inverted y fits to "lower notes being on lower extrema with higher y value"
@@ -60,7 +76,7 @@ class SoundConverter {
         // 0 bis roiHeight, auch bei screen resize.
         // bei screen resize sind einfach nur die ridgepunkte anders, weil anders extrahiert wird...
 
-        for (let i = 0; i <= this.scale.length; i++) {
+        for (let i = 0; i < this.scaleNotes.length; i++) {
             stepHeights.push(i * stepSize)
         }
 
@@ -69,6 +85,45 @@ class SoundConverter {
 
 
         //2. match  pois to these n steps
+
+        // dazu erstmal scaleNotes umdrehen, weil kleineres y = höherer Ton!
+
+        let flippedScale = this.scaleNotes.toReversed();
+
+
+        let finalNotes = [];
+
+
+        for (let p of pois) {
+
+
+            for (let i = 0; i < stepHeights.length; i++) {
+
+                // entweder bei direct hit, deckt aber auch edgecases 0 und ymax ab!
+                if (p.y == stepHeights[i]) {
+                    console.log("py is ", stepHeights[i], " converted to note ", flippedScale[i])
+                    finalNotes.push(flippedScale[i])
+                    break;
+                }
+
+                if (!(p.y > stepHeights[i])) {
+                    let index = Math.abs(p.y - stepHeights[i - 1]) < Math.abs(p.y - stepHeights[i]) ? i - 1 : i
+                    console.log("py", p.y, "between ", stepHeights[i - 1], "/", stepHeights[i], "matched to ", stepHeights[index], "converted to note ", flippedScale[index])
+                    finalNotes.push(flippedScale[index])
+                    break;
+                }
+
+                // match p.y to one value out of stepHeights
+                // wenn bisher nix kam, weil y = rand: push letzte note
+            }
+
+        }
+
+        console.log("final notes; ", finalNotes)
+
+
+        this.finalNotes = finalNotes;
+
 
         //3. from the index of the closest step, get the corresponding note of the scale
 
@@ -150,16 +205,16 @@ class SoundConverter {
     // TODO: calculate a duration here, pass it to the main component.
     // start the progress bar at the same time as calling and let it run for the duration!
 
-    public playNotes = (notes: number[] = this.scale) => {
+    public playNotes = (notes: number[] = this.scaleNotes) => {
         // notes = this.scale[0]
+
+        if (!this.finalNotes) return;
 
         console.log("playnotes")
         const now = Tone.now();
         let delay = 0;
 
-
-
-        for (let t of notes) {
+        for (let t of this.finalNotes) {
 
             this.synth.triggerAttackRelease(t, "64n", now + delay);
             delay += 0.2

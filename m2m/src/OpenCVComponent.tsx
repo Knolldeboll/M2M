@@ -142,6 +142,7 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
 
         //Achtung: das ist X Y W H Kollege. also x/y = 50%vw/vh, width/height je 90% vw/vh
 
+        // die w/h entspricht später den columns/rows der mat
         let rect = new cv.Rect(255, 120, 400, 100);
 
 
@@ -458,15 +459,26 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
 
     const startTone = async () => {
 
-        if (soundConverter.current) return;
+
+        if (!finalPois.current) {
+            console.log("no pois yet to convert!")
+            return;
+        }
 
         await Tone.start();
-
-
         console.log("Tone ready")
-        setSoundReady(true)
-        soundConverter.current = new SoundConverter();
 
+
+
+        if (!soundConverter.current) {
+            soundConverter.current = new SoundConverter(24, "C4");
+
+        }
+
+        soundConverter.current?.convertPOIs(finalPois.current, rows.current!);
+        setSoundReady(true)
+        // n = number of notes around key, including key!
+        // so n = 8: key-> upper = 8 notes, key -> lower = 8, -1 (key not duplicated) = 15
 
     }
 
@@ -474,13 +486,7 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
     // TODO: ggf. await bis die pois geladen sind.
     const play = () => {
 
-        if (!finalPois.current) {
-            console.log("no pois yet to play!")
-            return;
-        }
         soundConverter.current?.playNotes()
-        soundConverter.current?.convertPOIs(finalPois.current, rows.current!);
-
     }
 
 
