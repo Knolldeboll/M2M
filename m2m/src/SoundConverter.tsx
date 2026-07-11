@@ -14,46 +14,64 @@ class SoundConverter {
 
     private finalNotes: any[] | undefined;
     // über wieviele halbtöne um den key rum reden wir? z.B. 8 ist insg. 2 oktaven
-    private scaleSize;
+    private octaveCount;
     private majorSteps = [2, 2, 1, 2, 2, 2, 1];
 
     private synth = new Tone.PolySynth(Tone.Synth).toDestination();
 
 
-    constructor(scaleSize: number, root: string) {
+    constructor(octaveCount: number, root: string) {
         this.scaleNotes = [];
-        this.scaleSize = scaleSize;
+        this.octaveCount = octaveCount;
         this.generateScale(Tone.Midi(root));
 
 
     }
 
+
+    // das Falsch! Der macht da irgend ne kacke...
     private generateScale = (rootMidi: any) => {
-        console.log("scalesize mep mep", this.scaleSize)
+        console.log("scalesize mep mep", this.octaveCount)
 
         let scaleSteps = [0];
 
+        //inverval: um wieviele halbtöne verschoben? ehehe
         let interval = 0;
 
-        for (let i = 1; i < this.scaleSize; i++) {
-            interval += this.majorSteps[(i - 1) % this.majorSteps.length];
+
+
+        console.log("generate scale: octaves=", this.octaveCount, " notes:", this.octaveCount * 8, "*2 - key, ")
+
+
+        for (let i = 0; i < this.octaveCount * 7; i++) {
+            interval += this.majorSteps[(i) % this.majorSteps.length];
             scaleSteps.push(interval);
         }
 
 
+
         console.log("generated major scale steps: ", scaleSteps)
+
+
 
         let higherNotes = scaleSteps.map(step =>
             Tone.Frequency(rootMidi + step, "midi").toNote()
         )
 
-        let lowerNotes = scaleSteps.slice(0, -1).map(step =>
-            Tone.Frequency(rootMidi - 12 + step, "midi").toNote()
+
+        // also da kommt von 1 bis 12 raus. Aber lowestnote muss auch mal mehr steps tiefer sein als 12...
+        const lowestNote = 12 * this.octaveCount // Math.floor(scaleSteps.at(-1)! / 12) * 12;
+
+        console.log("lowestnote apparently is; ", lowestNote, "")
+
+
+        // hier letzten step weglassen, weil sonst der key doppelt darinnen ist
+        let lowerNotes: any[] = scaleSteps.slice(0, -1).map(step =>
+            Tone.Frequency(rootMidi - lowestNote + step, "midi").toNote()
         )
 
         this.scaleNotes.push(...lowerNotes, ...higherNotes)
-
-        console.log("generated scale:", this.scaleNotes)
+        console.log("generated scale:", lowerNotes, higherNotes)
     }
 
 
@@ -205,19 +223,23 @@ class SoundConverter {
     // TODO: calculate a duration here, pass it to the main component.
     // start the progress bar at the same time as calling and let it run for the duration!
 
-    public playNotes = (notes: number[] = this.scaleNotes) => {
+    public playTest = () => {
+        this.playNotes(this.scaleNotes)
+    }
+
+    public playNotes = (notes: number[] = this.finalNotes!) => {
         // notes = this.scale[0]
 
-        if (!this.finalNotes) return;
+        if (!notes) return;
 
         console.log("playnotes")
         const now = Tone.now();
         let delay = 0;
 
-        for (let t of this.finalNotes) {
+        for (let t of notes) {
 
             this.synth.triggerAttackRelease(t, "64n", now + delay);
-            delay += 0.2
+            delay += 0.4
         }
 
     }

@@ -286,13 +286,17 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
         // first ones free? hängt davon ab ob man beim rect anfängt oder erst beim ersten gipfel, der ggf früh nachm strich kommt
         //out.push(ridge[0])
 
+        // min distance between se points of interest!
+        // should also depend on the actual number of columns, 
+        // for example if cols.length = 400, then maybe *0.025 = 10 or smth if 10 is good distance!
+
+        const minDistance = 8;
 
 
+        // get neighbours
         for (let l = neigbourCount; l < (ridge.length - neigbourCount); l++) {
 
-
             let neighbours = [];
-
             // iterate over neighbourCount* neighbours of ridge[l]
             for (let i = l - neigbourCount; i <= l + neigbourCount; i++) {
                 if (i < 0 || i >= ridge.length) {
@@ -302,15 +306,13 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
                     continue;
                 };
 
-                // save 3 neihgbours of current point
+
                 neighbours.push(ridge[i])
 
             }
 
-
             // safety catch for edge cases (indeed at the edge)
             if (neighbours.length != (neigbourCount * 2 + 1)) {
-
                 console.log("neighbors not", (neigbourCount * 2 + 1), neighbours)
                 neighbours = [];
                 continue;
@@ -381,7 +383,7 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
                     // out.push(middleman)
                     console.log("min:", middleman, "rate", higherRate)
                     out.push(middleman)
-                    l += 5;
+                    l += minDistance;
                 }
             }
 
@@ -394,7 +396,7 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
                 if (lowerRate >= 1) {
                     console.log("max", middleman, " rate: ", lowerRate)
                     out.push(middleman)
-                    l += 5;
+                    l += minDistance;
                 }
             }
 
@@ -471,11 +473,12 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
 
 
         if (!soundConverter.current) {
-            soundConverter.current = new SoundConverter(24, "C4");
+            soundConverter.current = new SoundConverter(2, "C4");
 
         }
 
         soundConverter.current?.convertPOIs(finalPois.current, rows.current!);
+        //soundConverter.current?.playTest();
         setSoundReady(true)
         // n = number of notes around key, including key!
         // so n = 8: key-> upper = 8 notes, key -> lower = 8, -1 (key not duplicated) = 15
