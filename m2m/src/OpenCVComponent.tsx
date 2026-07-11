@@ -4,7 +4,8 @@ import * as Tone from "tone";
 import "./types.ts"
 
 
-import berge from "./assets/berge.jpeg";
+//import berge from "./assets/berge.jpeg";
+import berge from "./assets/bergeZoomed.jpg"
 import customMat from "./customMat";
 import SoundConverter from "./SoundConverter";
 import type { Point } from "./types.ts";
@@ -18,6 +19,7 @@ interface OpenCVComponentProps {
 const OpenCVComponent = ({ }: OpenCVComponentProps) => {
 
 
+    // useOpenCv() geht, weil um dieses Component ein CvProvider drum ist!
     const { loaded, cv } = useOpenCv();
     const inputRef = useRef<HTMLInputElement>(null);
     const imgRef = useRef<HTMLImageElement>(null);
@@ -27,6 +29,20 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
 
     const finalPois = useRef<Point[] | null>(null);
     const rows = useRef<number>(null)
+
+
+    // extract settings
+
+    // min distance between se points of interest!
+    // should also depend on the actual number of columns, 
+    // for example if cols.length = 400, then maybe *0.025 = 10 or smth if 10 is good distance!
+
+    // Statt nur dem, sollte vielleicht auch "minDistY" zählen: so können nahe, aber doch vom y her sehr verschiedene 
+    // Points berücksichtigt werden, z.b. bei sehr steilem abfall, dann aber mit kante drin. oder krassem zickzack
+    const extractPOIDistance = 5;
+    // neighbourcount: zwischen wievielen neighbours soll die same/higher/lowerrate ermittelt werden?
+    // bisschen so die "Eindeutigkeit" von extrema
+    const neighbourCount = 25;
 
 
     const soundConverter = useRef<SoundConverter | null>(null);
@@ -159,23 +175,25 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
             return;
         }
 
+        console.log("process img")
 
         const img = imgRef.current;
         const rawMat = cv.imread(img);
+        const displayRawMat = rawMat.clone();
 
-        const rectMat = rectify(rawMat);
+
+        //const rectMat = rectify(rawMat);
         // 
 
         //  use customMat class for applying filters in chained way
-        const processedMat = new customMat(cv, rectMat).rgb().bilateralFilter().gray().medianBlur(5).canny().toCvMat();
+        const processedMat = new customMat(cv, rawMat).rgb().bilateralFilter().gray().medianBlur(5).canny().toCvMat();
 
-        console.log("processed mat: ", processedMat)
 
         rows.current = processedMat.rows;
         console.log("rows:", rows.current)
 
 
-        // non mat-returning operations
+        // point[]-returning operations
 
         const extracted = extractRidgePoints(processedMat)
         const smoothened = smoothRidgePoints(extracted);
@@ -188,9 +206,11 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
 
         // packt die pois aufs canny-mat und displayt das dann auf dem canvas!
 
-        // drawPointsOnMat(extracted, processedMat)
+        //drawPointsOnMat(pois, processedMat, 3, "gray")
 
-        drawPointsOnMat(pois, processedMat);
+        // displayMat(displayRawMat);
+
+        drawPointsOnMat(pois, displayRawMat, 3, "rgba");
 
         //cleanup - failt aber, anscheinend wird inen bums noch gerbaucht
         // processedMat.delete();
@@ -206,6 +226,7 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
     /**Extract points of interest from the processed mat. */
     const extractRidgePoints = (mat: any) => {
 
+        console.log("extract Ridge Points")
         const data = mat.data;
         const ridge = []
 
@@ -239,7 +260,7 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
 
     /**Applies Gaussian smoothing to the ridge point array to  */
     const smoothRidgePoints = (ridge: Point[]) => {
-
+        console.log("smooth Ridge Points")
         const kernel = [1, 4, 6, 4, 1];
         const radius = 2;
 
@@ -277,28 +298,22 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
 
     // TODO: Check what happens at infinity (/0) - is this good as is?
     const extractPois = (ridge: Point[]) => {
-
+        console.log("extract POIs")
         //return [];
 
         const out: Point[] = [];
 
-        const neigbourCount = 10;
+
         // first ones free? hängt davon ab ob man beim rect anfängt oder erst beim ersten gipfel, der ggf früh nachm strich kommt
         //out.push(ridge[0])
 
-        // min distance between se points of interest!
-        // should also depend on the actual number of columns, 
-        // for example if cols.length = 400, then maybe *0.025 = 10 or smth if 10 is good distance!
-
-        const minDistance = 8;
-
 
         // get neighbours
-        for (let l = neigbourCount; l < (ridge.length - neigbourCount); l++) {
+        for (let l = neighbourCount; l < (ridge.length - neighbourCount); l++) {
 
             let neighbours = [];
             // iterate over neighbourCount* neighbours of ridge[l]
-            for (let i = l - neigbourCount; i <= l + neigbourCount; i++) {
+            for (let i = l - neighbourCount; i <= l + neighbourCount; i++) {
                 if (i < 0 || i >= ridge.length) {
                     // wird eh nix drin sein
                     console.log("nix neighbours", i)
@@ -312,8 +327,8 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
             }
 
             // safety catch for edge cases (indeed at the edge)
-            if (neighbours.length != (neigbourCount * 2 + 1)) {
-                console.log("neighbors not", (neigbourCount * 2 + 1), neighbours)
+            if (neighbours.length != (neighbourCount * 2 + 1)) {
+                console.log("neighbors not", (neighbourCount * 2 + 1), neighbours)
                 neighbours = [];
                 continue;
             }
@@ -383,7 +398,7 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
                     // out.push(middleman)
                     console.log("min:", middleman, "rate", higherRate)
                     out.push(middleman)
-                    l += minDistance;
+                    l += extractPOIDistance;
                 }
             }
 
@@ -396,7 +411,7 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
                 if (lowerRate >= 1) {
                     console.log("max", middleman, " rate: ", lowerRate)
                     out.push(middleman)
-                    l += minDistance;
+                    l += extractPOIDistance;
                 }
             }
 
@@ -433,26 +448,37 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
     }
 
 
-    const drawPointsOnMat = (points: { x: number; y: number }[], inMat: any) => {
-
+    const drawPointsOnMat = (points: { x: number; y: number }[], inMat: any, rad: number = 3, baseColor: "gray" | "rgba") => {
+        console.log("draw points on mat")
         const overlay = inMat.clone();
 
-        const overlayRgba = new customMat(cv, overlay).gray2rgba().toCvMat();
-        console.log(overlayRgba.channels())
+        let overlayColored;
+        switch (baseColor) {
+            case "gray":
+                overlayColored = new customMat(cv, overlay).gray2rgba().toCvMat();
+                break;
+            case "rgba":
+                overlayColored = new customMat(cv, overlay).toCvMat();
+                break;
+        }
+
+
+
+        console.log(overlayColored.channels())
         // return;
         for (const p of points) {
             cv.circle(
-                overlayRgba,
+                overlayColored,
                 new cv.Point(p.x, p.y),
-                1,
-                new cv.Scalar(0, 0, 255, 255),
+                rad,
+                new cv.Scalar(255, 255, 255, 255),
                 -1
             );
         }
 
 
 
-        cv.imshow(outputCanvasRef.current!, overlayRgba)
+        cv.imshow(outputCanvasRef.current!, overlayColored)
         //overlay.delete();
         //inMat.delete();
 
@@ -508,7 +534,7 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
 
             <div className="w-[80%] mx-auto" style={{ display: "flex", flexDirection: "column" }}>
                 <canvas ref={outputCanvasRef} id="processedOutputCanvas"></canvas>
-                <button onClick={startTone}>Start Tone</button>
+                <button onClick={startTone}>Start Tone TEST</button>
                 {soundReady && (<button onClick={play}>Play Sound</button>)}
             </div>
 
