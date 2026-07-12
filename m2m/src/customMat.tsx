@@ -14,6 +14,7 @@ class customMat {
         this.cv = cv;
         this.mat = initialMat;
         this.colorSpace = colorSpace;
+        console.log(this.colorSpace)
     }
 
 

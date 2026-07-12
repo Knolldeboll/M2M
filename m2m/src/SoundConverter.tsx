@@ -154,14 +154,15 @@ class SoundConverter {
 
     // Convert POIs to notes within the scale.. old approach that squashes the octave between
     // the base and the most extreme absolute extrema
+    /*
     public convertPOIsOptimized = (pois: Point[]) => {
 
         // ACHTUNG: niedrigeres Y: höher xD
-        const base = pois[0];
+        //        const base = pois[0];
 
         // find borders
 
-        /*
+       
         const highest = pois.slice(1).reduce((max, current) => current.y < max.y ? current : max)
         const lowest = pois.slice(1).reduce((max, current) => current.y > max.y ? current : max)
 
@@ -171,7 +172,6 @@ class SoundConverter {
         const lDist = (Math.abs(base.y - lowest.y))
         const referenceBorder = hDist > lDist ? { point: highest.y, distance: hDist } : { point: lowest.y, distance: lDist }
         console.log("conPois: base ", base, " highes", highest, "lowest", lowest, "extremest:", referenceBorder)
-*/
 
 
         return;
@@ -204,19 +204,19 @@ class SoundConverter {
 
 
 
-        console.log("pois ", pois, "base: ", base, "highest:", highest, "lowest", lowest)
+        //  console.log("pois ", pois, "base: ", base, "highest:", highest, "lowest", lowest)
 
 
         // then iteratively figure out, how many steps are between base and furthest-away
 
 
-    }
+    }*/
 
 
-    /*checks the quality of some points to some borders,  */
+    /*checks the quality of some points to some borders,  
     private checkDistributionQuality = (borders, points) => {
 
-    }
+    }*/
 
     // plays the previously generated scale!
     // must smh match the progess bar of the UI 

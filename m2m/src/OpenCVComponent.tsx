@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useOpenCv } from "opencv-react";
 import * as Tone from "tone";
 import "./types.ts"
@@ -11,11 +11,16 @@ import SoundConverter from "./SoundConverter";
 import type { Point } from "./types.ts";
 
 
+
+
 interface OpenCVComponentProps {
+    img?: string
 }
 
 
-/** Just following the tutorial at https://docs.opencv.org/3.4.20/d0/d84/tutorial_js_usage.html */
+//Just following the tutorial at https://docs.opencv.org/3.4.20/d0/d84/tutorial_js_usage.html 
+
+/**Component containing business logic for extracting POIs from captured Image and providing a canvas to display extraction results  */
 const OpenCVComponent = ({ }: OpenCVComponentProps) => {
 
 
@@ -23,9 +28,9 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
     const { loaded, cv } = useOpenCv();
     const inputRef = useRef<HTMLInputElement>(null);
     const imgRef = useRef<HTMLImageElement>(null);
-    const canvasRef = useRef<HTMLCanvasElement>(null);
+    //const canvasRef = useRef<HTMLCanvasElement>(null);
     const outputCanvasRef = useRef<HTMLCanvasElement>(null);
-    const [imgSrcURL, setImgSrcURL] = useState<string | null>(null);
+    // const [imgSrcURL, setImgSrcURL] = useState<string | null>(null);
 
     const finalPois = useRef<Point[] | null>(null);
     const rows = useRef<number>(null)
@@ -50,13 +55,17 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
     const [soundReady, setSoundReady] = useState(false);
 
     /**Convert the inputs file to a url and set the imgs src to it. */
+    /*
     const onFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         console.log("file changed")
         setImgSrcURL(URL.createObjectURL((event.target as HTMLInputElement).files![0]));
     }
 
+    */
+
     /**When img element loads its iamge, process it into a mat and show it on the canvas. */
 
+    /*
     const onImgLoaded = () => {
         console.log("img loaded")
 
@@ -75,6 +84,7 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
         //Also convert canvas back to a mat
 
     }
+        */
 
 
 
@@ -82,6 +92,8 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
     /** Aus nem canvas 2d context die imagedata rausziehen, dann daraus ein mat generieren. 
      * imagedata braucht man ggf. zum filtern bzw. aufbereiten des bilds, oder auch um drauf zu arbeiten!
      */
+
+    /*
     const matFromCanvas = () => {
 
         console.log("mat from canvas")
@@ -103,10 +115,10 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
 
         console.log("mat from canvas result: ", srcMat)
 
-        /*        // Dieses Mat könnte jetzt noch processed werden, z.b. farben convert oä
+               // Dieses Mat könnte jetzt noch processed werden, z.b. farben convert oä
                // srcmat auf canvas anzeigen.
                cv.imshow(outputCanvasRef.current!, srcMat)
-        */
+        
 
         // Alternativ kann man auch statt imshow das Mat wieder direkt auf den canvas context schreiben: 
         // ggf. braucht man das beim processing von so bilddaten.
@@ -116,11 +128,13 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
 
     }
 
-
+*/
 
     /**Man kann auch imgData wieder in den 2d-context eines canvases schreiben, um anzuzeigen
      * -- ggf. interessant, wenn man imgData manipulieren möchte.
      */
+
+    /*
     const displayImgDataOnCanvas = (imgData: any) => {
 
 
@@ -137,13 +151,15 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
         // So hier die imgData spezifisch auf den 2d-context packen!
         outputctx?.putImageData(imgData, 0, 0)
     }
-
+*/
 
 
 
     // TODO: display rect to be clipped on the original input canvas (image or video)
 
     // Achtung: stand jetzt kommt auch immer n anderes rect, je nch screen size... BRO
+
+    /*
     const rectify = (inMat: any) => {
         if (!imgRef.current || !outputCanvasRef.current) {
             console.log("no img or no output canvas")
@@ -165,6 +181,8 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
         return inMat.roi(rect);
 
     }
+
+    */
 
 
     /** Main Method for processing image from img element */
@@ -437,6 +455,7 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
         return out;
     }
 
+    /*
     const displayMat = (mat: any) => {
 
 
@@ -446,7 +465,7 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
         cv.imshow(outputCanvasRef.current!, mat);
 
     }
-
+*/
 
     const drawPointsOnMat = (points: { x: number; y: number }[], inMat: any, rad: number = 3, baseColor: "gray" | "rgba") => {
         console.log("draw points on mat")
@@ -525,14 +544,14 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
     return (loaded && (
         <div className=" w-full flex flex-col ">
             <div className="w-[80%] mx-auto" >
-                <img ref={imgRef} src={berge} onLoad={processImg} id="imageSrc" alt="No Image" />
+                <img className="w-full" ref={imgRef} src={berge} onLoad={processImg} id="imageSrc" alt="No Image" />
                 <div >
-                    imageSrc <input ref={inputRef} type="file" id="fileInput" name="file" onChange={onFileChange} />
+                    imageSrc <input ref={inputRef} type="file" id="fileInput" name="file" onChange={() => console.log("input not implemented")} />
                 </div>
             </div>
 
 
-            <div className="w-[80%] mx-auto" style={{ display: "flex", flexDirection: "column" }}>
+            <div className="w-[80%] mx-auto" style={{ display: "flex", flexDirection: "column", flex: "none" }}>
                 <canvas ref={outputCanvasRef} id="processedOutputCanvas"></canvas>
                 <button onClick={startTone}>Start Tone TEST</button>
                 {soundReady && (<button onClick={play}>Play Sound</button>)}
