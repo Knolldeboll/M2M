@@ -5,11 +5,7 @@ import { useEffect, useState } from "react";
 const MainFrame = () => {
   const [isLandscape, setIsLandscape] = useState(false);
 
-  useEffect(() => {
-    if (window.innerWidth > window.innerHeight) {
-    }
-  }, []);
-
+  // useEffect(()=>{},isLandscape)
   /*
   const mobileCheck = function () {
     let check = false;
@@ -31,13 +27,35 @@ const MainFrame = () => {
     console.log("mobiledevice?", mobileCheck());
   }, []);
   */
+  useEffect(() => {
+    const handleResize = () => {
+      setIsLandscape(window.innerWidth > window.innerHeight);
+      console.log("mama resize: ", window.innerWidth > window.innerHeight);
+    };
+
+    window.addEventListener("resize", handleResize);
+
+    // Run once on mount
+    handleResize();
+
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
+    console.log("state changed");
+  }, [isLandscape]);
 
   return (
-    <div>
+    <>
       <OpenCvProvider>
-        <OpenCVComponent></OpenCVComponent>
+        {!isLandscape && <div>Landscape pls</div>}
+        {isLandscape && (
+          <div>
+            <OpenCVComponent></OpenCVComponent>
+          </div>
+        )}
       </OpenCvProvider>
-    </div>
+    </>
   );
 };
 export default MainFrame;

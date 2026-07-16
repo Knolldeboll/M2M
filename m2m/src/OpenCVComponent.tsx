@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useOpenCv } from "opencv-react";
 import * as Tone from "tone";
 import "./types.ts";
@@ -169,6 +169,16 @@ const OpenCVComponent = ({}: OpenCVComponentProps) => {
     }
 
     */
+
+  useEffect(() => {
+    console.log("mounted");
+
+    console.log("loaded?", loaded);
+
+    return () => {
+      console.log("unmounted");
+    };
+  }, []);
 
   /** Main Method for processing image from img element */
   const processImg = () => {
