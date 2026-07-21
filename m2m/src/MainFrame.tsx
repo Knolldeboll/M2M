@@ -1,7 +1,19 @@
 import { OpenCvProvider } from "opencv-react";
 import OpenCVComponent from "./OpenCVComponent";
 import { useEffect, useState } from "react";
+import CameraFrame from "./CameraFrame";
 
+/*
+*TODO: eigentlich wärs am schlausten, wenn man den ganzen OpenCV-Kram einfach in ner normalen Klasse 
+ohne jsx macht. Das einzige was OpenCV an visuellem zurückgibt, ist das Canvas mit den Punkten draufgemalt.
+Das kann man aber ggf. auch aus den Punkten selber generieren, zumal da für das Wiedergabe-UI da eh noch was ausserhalb gemacht werden muss.
+Ist vielleicht dann auch einfacher, für noten eigene Symbole zu malen statt diese circles von OpenCV.
+*/
+
+/**
+ * The main view of m2m containing the camera input screen,
+ * the overlay generated through opencvcomponents extraction, and eventually overlays for melody playback etc.
+ */
 const MainFrame = () => {
   const [isLandscape, setIsLandscape] = useState(false);
 
@@ -27,6 +39,7 @@ const MainFrame = () => {
     console.log("mobiledevice?", mobileCheck());
   }, []);
   */
+
   useEffect(() => {
     const handleResize = () => {
       setIsLandscape(window.innerWidth > window.innerHeight);
@@ -48,9 +61,12 @@ const MainFrame = () => {
   return (
     <>
       <OpenCvProvider>
-        {!isLandscape && <div>Landscape pls</div>}
+        {!isLandscape && (
+          <div>Handy umdrehen bitte! Landscapemode muss an sein.</div>
+        )}
         {isLandscape && (
           <div>
+            <CameraFrame></CameraFrame>
             <OpenCVComponent></OpenCVComponent>
           </div>
         )}

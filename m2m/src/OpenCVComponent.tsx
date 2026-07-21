@@ -15,7 +15,8 @@ interface OpenCVComponentProps {
 
 //Just following the tutorial at https://docs.opencv.org/3.4.20/d0/d84/tutorial_js_usage.html
 
-/**Component containing business logic for extracting POIs from captured Image and providing a canvas to display extraction results  */
+/**Component containing business logic for extracting POIs from captured Image and providing a
+ * canvas to display extraction results  */
 const OpenCVComponent = ({}: OpenCVComponentProps) => {
   // useOpenCv() geht, weil um dieses Component ein CvProvider drum ist!
   const { loaded, cv } = useOpenCv();
@@ -496,12 +497,15 @@ const OpenCVComponent = ({}: OpenCVComponentProps) => {
   //TODO: wenn nicht loaded, dann so spinner oder so.
 
   // TODO: Checken, ob die lib "opencv-react" wirklich so nice ist - denn wer weiß, was da für ne Version von opencv.js geladen wird?
+
+  // Das IMG-Element (oder ggf. auch canvas-2D-context) kommt dann später als Prop hier rein, das muss
+
   return (
     loaded && (
       <div className=" w-full flex flex-col ">
         <div className="w-[80%] max-w-[800px] mx-auto">
           <img
-            className="w-full"
+            className="w-full hidden"
             ref={imgRef}
             src={berge}
             onLoad={processImg}
