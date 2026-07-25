@@ -1,4 +1,5 @@
 import customMat from "./customMat";
+import { getCv } from "./OpenCVLoader";
 import type { Point } from "./types";
 
 // TODO: import cv from npm library/build
@@ -11,6 +12,7 @@ class CVPOIExtractor {
   // Statt nur dem, sollte vielleicht auch "minDistY" zählen: so können nahe, aber doch vom y her sehr verschiedene
   // Points berücksichtigt werden, z.b. bei sehr steilem abfall, dann aber mit kante drin. oder krassem zickzack
   private extractPOIDistance = 10;
+
   // neighbourcount: zwischen wievielen neighbours soll die same/higher/lowerrate ermittelt werden?
   // bisschen so die "Eindeutigkeit" von extrema
   private neighbourCount = 25;
@@ -19,12 +21,22 @@ class CVPOIExtractor {
     this.rows = undefined;
     this.finalPois = undefined;
     this.inputCanvas = undefined;
+
+    // Blockt einfach so. Da machen wir am besten dieses Ding mit der Static async methode,
+    // die nach abschluss erst den Constructor aufruft um ein vollständiges object zu generieren.
+    const cv = getCv();
+
+    console.log("cv loaded", cv);
   }
 
   /** Main Method for processing image Data from img element into POIs */
   /** Main Method for processing image from img element */
   public processImg = (inputImg: HTMLImageElement) => {
     // TODO:
+    if (!cv) {
+      console.log("cv not ready.");
+      return;
+    }
 
     console.log("process img");
 
@@ -290,3 +302,4 @@ class CVPOIExtractor {
     return out;
   };
 }
+export default CVPOIExtractor;

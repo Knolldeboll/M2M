@@ -1,4 +1,5 @@
 import { OpenCvProvider } from "opencv-react";
+//import opencv from "@techstark/opencv-js/opencv.js?url";
 import OpenCVComponent from "./OpenCVComponent";
 import { useEffect, useState } from "react";
 import CameraFrame from "./CameraFrame";
@@ -58,9 +59,13 @@ const MainFrame = () => {
     console.log("state changed");
   }, [isLandscape]);
 
+  const onload = () => {
+    console.log("OPENCV LOADED MAINFRAME");
+  };
+
   return (
     <>
-      <OpenCvProvider>
+      <OpenCvProvider onLoad={onload()}>
         {!isLandscape && (
           <div>Handy umdrehen bitte! Landscapemode muss an sein.</div>
         )}

@@ -8,6 +8,7 @@ import berge from "./assets/bergeZoomed.jpg";
 import customMat from "./customMat";
 import SoundConverter from "./SoundConverter";
 import type { Point } from "./types.ts";
+import CVPOIExtractor from "./CVPOIExtractor.ts";
 
 interface OpenCVComponentProps {
   img?: string;
@@ -29,6 +30,7 @@ const OpenCVComponent = ({}: OpenCVComponentProps) => {
   const finalPois = useRef<Point[] | null>(null);
   const rows = useRef<number>(null);
 
+  //const extractor = new CVPOIExtractor();
   // extract settings
 
   // min distance between se points of interest!
