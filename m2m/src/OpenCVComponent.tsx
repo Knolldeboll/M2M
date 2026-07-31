@@ -21,7 +21,6 @@ interface OpenCVComponentProps {
 const OpenCVComponent = ({}: OpenCVComponentProps) => {
   // useOpenCv() geht, weil um dieses Component ein CvProvider drum ist!
   const { loaded, cv } = useOpenCv();
-  const inputRef = useRef<HTMLInputElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
   //const canvasRef = useRef<HTMLCanvasElement>(null);
   const outputCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -514,20 +513,10 @@ const OpenCVComponent = ({}: OpenCVComponentProps) => {
             id="imageSrc"
             alt="No Image"
           />
-          <div>
-            imageSrc{" "}
-            <input
-              ref={inputRef}
-              type="file"
-              id="fileInput"
-              name="file"
-              onChange={() => console.log("input not implemented")}
-            />
-          </div>
         </div>
 
         <div
-          className="w-[80%] mx-auto"
+          className="w-[100%] fixed top-0 left-0"
           style={{ display: "flex", flexDirection: "column", flex: "none" }}
         >
           <canvas ref={outputCanvasRef} id="processedOutputCanvas"></canvas>
