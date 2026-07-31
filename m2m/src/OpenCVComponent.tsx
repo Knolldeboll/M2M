@@ -9,9 +9,13 @@ import berge from "./assets/bergeZoomed.jpg";
 import SoundConverter from "./SoundConverter";
 import type { Point } from "./types.ts";
 
-
 import CvProcessor from "./services/CvProcessor.ts";
-
+import {
+  extractPois,
+  extractRidgePoints,
+  smoothRidgePoints,
+} from "./services/extraction.ts";
+import { drawPointsOnMat } from "./services/cvUtils.ts";
 
 interface OpenCVComponentProps {
   img?: string;
@@ -21,11 +25,10 @@ interface OpenCVComponentProps {
 
 /**Component containing business logic for extracting POIs from captured Image and providing a
  * canvas to display extraction results  */
-const OpenCVComponent = ({ }: OpenCVComponentProps) => {
+const OpenCVComponent = ({}: OpenCVComponentProps) => {
   // useOpenCv() geht, weil um dieses Component ein CvProvider drum ist!
 
   //const { loaded, cv } = useOpenCv();
-
 
   // const { loaded, cv } = useOpenCv();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -38,37 +41,29 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
   const finalPois = useRef<Point[] | null>(null);
   const rows = useRef<number>(null);
 
-
-
   const soundConverter = useRef<SoundConverter | null>(null);
   const [soundReady, setSoundReady] = useState(false);
 
   const [cvProcessor, setCvProcessor] = useState<CvProcessor | null>(null);
 
-
-
   console.log("component");
 
-  // useEffect hier, um async-Stuff in React-Components aufzurufen! 
+  // useEffect hier, um async-Stuff in React-Components aufzurufen!
   // hier wird auch state geändert, (je nach Status des Promises)
 
   // Kann man noch in ne custom Hook extracten
 
-
   useEffect(() => {
-    console.log("useEffect cvprocessor loading")
+    console.log("useEffect cvprocessor loading");
     async function init() {
       const p = await CvProcessor.create();
 
       setCvProcessor(p);
-      console.log("cvProcessor ready!", cvProcessor)
+      console.log("cvProcessor ready!", cvProcessor);
     }
 
     init();
   }, []);
-
-
-
 
   /**Convert the inputs file to a url and set the imgs src to it. */
   /*
@@ -195,7 +190,6 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
 
     */
 
-
   /** Main Method for processing image from img element, called un user button press */
 
   /*
@@ -254,48 +248,6 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
 
 */
 
-
-  // TODO: Extract in separate file.
-
-  /*
-  const drawPointsOnMat = (
-    points: { x: number; y: number }[],
-    inMat: any,
-    rad: number = 3,
-    baseColor: "gray" | "rgba",
-  ) => {
-    console.log("draw points on mat");
-    const overlay = inMat.clone();
-
-    let overlayColored;
-    switch (baseColor) {
-      case "gray":
-        overlayColored = new ProcessableMat(cv, overlay).gray2rgba().toCvMat();
-        break;
-      case "rgba":
-        overlayColored = new ProcessableMat(cv, overlay).toCvMat();
-        break;
-    }
-
-    console.log(overlayColored.channels());
-    // return;
-    for (const p of points) {
-      cv.circle(
-        overlayColored,
-        new cv.Point(p.x, p.y),
-        rad,
-        new cv.Scalar(255, 255, 255, 255),
-        -1,
-      );
-    }
-
-    cv.imshow(outputCanvasRef.current!, overlayColored);
-    //overlay.delete();
-    //inMat.delete();
-  };
-
-  */
-
   const startTone = async () => {
     if (!finalPois.current) {
       console.log("no pois yet to convert!");
@@ -318,25 +270,44 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
 
   // TODO: ggf. await bis die pois geladen sind.
   const play = () => {
+    console.log("sc present? ", soundConverter.current);
     soundConverter.current?.playNotes();
   };
 
   const convertImage = () => {
-    console.log("convertimage callback ")
+    console.log("convertimage callback ");
 
     if (!cvProcessor) {
-      console.log("no cvprocessor object!")
+      console.log("no cvprocessor object!");
       return;
     }
 
     if (!imgRef.current) {
-      console.log("no imgref")
+      console.log("no imgref");
       return;
     }
 
-    let processedMat = cvProcessor.processImgIntoEdgeMat(imgRef.current)
-    console.log("process result", processedMat)
-  }
+    let processedMat = cvProcessor.processImgIntoEdgeMat(imgRef.current);
+    console.log("process result", processedMat);
+
+    rows.current = processedMat.rows;
+
+    let ridge = extractRidgePoints(processedMat);
+    let smoothened = smoothRidgePoints(ridge);
+    let pois = extractPois(smoothened);
+
+    finalPois.current = pois;
+
+    drawPointsOnMat(
+      pois,
+      processedMat,
+      undefined,
+      "gray",
+      outputCanvasRef.current!,
+    );
+    // nun display auf mat:
+    // Nun extract:
+  };
 
   //TODO: wenn nicht loaded, dann so spinner oder so.
 
@@ -345,7 +316,7 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
   // Das IMG-Element (oder ggf. auch canvas-2D-context) kommt dann später als Prop hier rein, das muss
 
   if (cvProcessor) {
-    console.log("cvprocesser ready")
+    console.log("cvprocesser ready");
     return (
       <div className=" w-full flex flex-col ">
         <div className="w-[80%] max-w-200 mx-auto">
@@ -369,12 +340,10 @@ const OpenCVComponent = ({ }: OpenCVComponentProps) => {
           {soundReady && <button onClick={play}>Play Sound</button>}
         </div>
       </div>
-    )
+    );
   } else {
-    console.log("cvprocesser loding")
-    return (<div className="w-full h-full bg-amber-900">LOADING</div>)
+    console.log("cvprocesser loding");
+    return <div className="w-full h-full bg-amber-900">LOADING</div>;
   }
-
-
 };
 export default OpenCVComponent;
