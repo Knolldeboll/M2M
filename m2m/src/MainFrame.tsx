@@ -65,17 +65,17 @@ const MainFrame = () => {
 
   return (
     <>
-      <OpenCvProvider onLoad={onload()}>
-        {!isLandscape && (
-          <div>Handy umdrehen bitte! Landscapemode muss an sein.</div>
-        )}
-        {isLandscape && (
-          <div>
-            <CameraFrame></CameraFrame>
-            <OpenCVComponent></OpenCVComponent>
-          </div>
-        )}
-      </OpenCvProvider>
+
+      {!isLandscape && (
+        <div>Handy umdrehen bitte! Landscapemode muss an sein.</div>
+      )}
+      {isLandscape && (
+        <div>
+          <CameraFrame></CameraFrame>
+          <OpenCVComponent></OpenCVComponent>
+        </div>
+      )}
+
     </>
   );
 };

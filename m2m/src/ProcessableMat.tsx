@@ -1,6 +1,6 @@
 
 /**Class containing overweritable cv.mat that allows chaining itself with filter methods. */
-class customMat {
+class ProcessableMat {
 
 
     private mat: any;
@@ -137,4 +137,4 @@ class customMat {
     };
 
 
-} export default customMat;
+} export default ProcessableMat;

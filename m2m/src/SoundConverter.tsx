@@ -4,7 +4,7 @@ import type { Point } from "./types";
 
 
 
-console.log("SoundConverter module loaded", Date.now());
+//console.log("SoundConverter module loaded", Date.now());
 
 class SoundConverter {
 
