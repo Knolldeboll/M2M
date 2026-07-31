@@ -29,8 +29,6 @@ const OpenCVComponent = ({}: OpenCVComponentProps) => {
   const finalPois = useRef<Point[] | null>(null);
   const rows = useRef<number>(null);
 
-  const extractor = new CVPOIExtractor();
-
   //const extractor = new CVPOIExtractor();
   // extract settings
 
@@ -194,8 +192,7 @@ const OpenCVComponent = ({}: OpenCVComponentProps) => {
     console.log("process img");
 
     const img = imgRef.current;
-
-    const rawMat = extractor.processImg(img);
+    const rawMat = cv.imread(img);
     const displayRawMat = rawMat.clone();
 
     //const rectMat = rectify(rawMat);
