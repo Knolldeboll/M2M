@@ -63,9 +63,9 @@ const MainFrame = () => {
     console.log("OPENCV LOADED MAINFRAME");
   };
 
+  // eig handlet der mainframe alles gute.
   return (
     <>
-
       {!isLandscape && (
         <div>Handy umdrehen bitte! Landscapemode muss an sein.</div>
       )}
@@ -75,7 +75,6 @@ const MainFrame = () => {
           <OpenCVComponent></OpenCVComponent>
         </div>
       )}
-
     </>
   );
 };

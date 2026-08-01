@@ -330,13 +330,19 @@ const OpenCVComponent = ({}: OpenCVComponentProps) => {
           />
         </div>
 
-        <div
-          className="w-[100%] fixed top-0 left-0"
-          style={{ display: "flex", flexDirection: "column", flex: "none" }}
-        >
-          <canvas ref={outputCanvasRef} id="processedOutputCanvas"></canvas>
+        <div className="w-full h-full fixed top-0 left-0">
+          <canvas
+            className="w-full"
+            ref={outputCanvasRef}
+            id="processedOutputCanvas"
+          ></canvas>
           <button onClick={startTone}>Start Tone TEST</button>
-          <button onClick={convertImage}>convert image</button>
+          <button
+            onClick={convertImage}
+            className="fixed top-[90%] left-[45%] bg-amber-50 p-2"
+          >
+            Convert Image
+          </button>
           {soundReady && <button onClick={play}>Play Sound</button>}
         </div>
       </div>
